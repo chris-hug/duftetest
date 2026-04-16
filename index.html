@@ -53,7 +53,7 @@
     /* Long scene so the medallion stays pinned and rotates as long as you scroll. */
     .scene {
       position: relative;
-      height: 1000vh;
+      height: 600vh;
     }
 
     .stage {
@@ -164,34 +164,35 @@
       renderConfig: { devicePixelRatio: basePR * 1.6 },
     });
 
-    // Rotation is driven entirely by scroll — no idle spin.
+    // Rotation is driven by scroll across the scene, plus an idle spin that
+    // kicks in once the scene is scrolled past (so the visual keeps rotating
+    // as it leaves the viewport).
     const scrollState = { frame: 0 };
+    const idleState   = { frame: 0 };
     let   totalFrames = 0;
+    let   idleTween   = null;
 
     const render = () => {
-      const f = scrollState.frame;
+      const f = scrollState.frame + idleState.frame;
       player.setFrame(((f % totalFrames) + totalFrames) % totalFrames);
     };
 
-    const CROSSFADE_MS = 240;
-    const SCENE_VH     = 1000;  // must match .scene height in CSS
-    const TOTAL_SPINS  = 10;    // rotations across the whole pinned range
-    const SHRINK_SPINS = 2;     // scale 1.5→1 happens during the first N spins
-    // The pinned scroll distance is SCENE_VH - 100 (sticky stage is 100vh tall).
-    // We align the scale scrub to the same rate as rotation so "first 2 spins"
-    // corresponds exactly to the scale-down phase.
-    const PINNED_VH      = SCENE_VH - 100;
-    const SHRINK_END_PCT = (SHRINK_SPINS / TOTAL_SPINS) * PINNED_VH;
+    const CROSSFADE_MS  = 240;
+    const SCENE_VH      = 600;   // must match .scene height in CSS
+    const TOTAL_SPINS   = 6;     // rotations driven by the scroll scrub
+    const SHRINK_SPINS  = 2;     // scale 1.5→1 happens during the first N spins
+    const IDLE_SPIN_S   = 2.5;   // seconds per rotation after the scene ends
+    const PINNED_VH       = SCENE_VH - 100;
+    const SHRINK_END_PCT  = (SHRINK_SPINS / TOTAL_SPINS) * PINNED_VH;
 
     player.addEventListener('load', () => {
       totalFrames = player.totalFrames;
       console.log('[medallion] loaded,', totalFrames, 'frames');
       player.setFrame(0);
 
-      // Scroll-scrubbed rotation: 6 full rotations across the 600vh scene.
-      // Scene is pinned for 500vh, so the medallion stays visible and keeps
-      // spinning for the entire length — first 2 rotations happen fast,
-      // the rest continue as you keep scrolling.
+      // Scroll-scrubbed rotation across the pinned scene.
+      // Once the user scrolls past the scene, an idle spin kicks in so the
+      // medallion keeps rotating as it leaves the viewport.
       gsap.to(scrollState, {
         frame: totalFrames * TOTAL_SPINS,
         ease: 'none',
@@ -203,6 +204,8 @@
           onUpdate: (self) => {
             progressBar.style.width = (self.progress * 100).toFixed(1) + '%';
           },
+          onLeave: () => startIdle(),
+          onEnterBack: () => stopIdle(),
         },
       });
 
@@ -228,6 +231,23 @@
         requestAnimationFrame(() => medal.classList.add('ready'));
       }
     });
+
+    // Idle spin — runs only when the scene has been scrolled past.
+    function startIdle() {
+      if (idleTween) return;
+      idleTween = gsap.to(idleState, {
+        frame: `+=${totalFrames}`,
+        duration: IDLE_SPIN_S,
+        ease: 'none',
+        repeat: -1,
+      });
+    }
+    function stopIdle() {
+      if (!idleTween) return;
+      idleTween.kill();
+      idleTween = null;
+      idleState.frame = 0;
+    }
 
     player.addEventListener('loadError', (e) => console.error('[medallion] load error', e));
 
