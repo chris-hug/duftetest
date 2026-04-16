@@ -53,7 +53,7 @@
     /* Long scene so the medallion stays pinned and rotates as long as you scroll. */
     .scene {
       position: relative;
-      height: 600vh;
+      height: 1000vh;
     }
 
     .stage {
@@ -173,12 +173,15 @@
       player.setFrame(((f % totalFrames) + totalFrames) % totalFrames);
     };
 
-    const CROSSFADE_MS    = 240;
-    const SCENE_VH        = 600;   // must match .scene height in CSS
-    const TOTAL_SPINS     = 6;     // rotations across the whole scene
-    const SHRINK_SPINS    = 2;     // scale 1.5→1 happens during the first N spins
-    // Scale scrub end offset, expressed in % of viewport height (ScrollTrigger "+=N%" syntax):
-    const SHRINK_END_PCT  = (SHRINK_SPINS / TOTAL_SPINS) * SCENE_VH;
+    const CROSSFADE_MS = 240;
+    const SCENE_VH     = 1000;  // must match .scene height in CSS
+    const TOTAL_SPINS  = 10;    // rotations across the whole pinned range
+    const SHRINK_SPINS = 2;     // scale 1.5→1 happens during the first N spins
+    // The pinned scroll distance is SCENE_VH - 100 (sticky stage is 100vh tall).
+    // We align the scale scrub to the same rate as rotation so "first 2 spins"
+    // corresponds exactly to the scale-down phase.
+    const PINNED_VH      = SCENE_VH - 100;
+    const SHRINK_END_PCT = (SHRINK_SPINS / TOTAL_SPINS) * PINNED_VH;
 
     player.addEventListener('load', () => {
       totalFrames = player.totalFrames;
