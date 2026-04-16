@@ -150,12 +150,15 @@
     const medal       = document.getElementById('medal');
     const progressBar = document.getElementById('progress');
 
+    // Bump the canvas backing-store resolution so it stays crisp while
+    // the element is CSS-scaled up to 1.5×. Without this the upscale is soft.
+    const basePR = window.devicePixelRatio || 1;
     const player = new DotLottie({
       canvas,
       src: LOTTIE_URL,
       autoplay: false,
       loop: false,
-      renderConfig: { devicePixelRatio: window.devicePixelRatio || 1 },
+      renderConfig: { devicePixelRatio: basePR * 1.6 },
     });
 
     // Two independent drivers, summed every frame:
