@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Dufte — Scroll + Click Medallion</title>
+  <style>
+    :root {
+      --bg: #3479e1;
+      --ink: #ffffff;
+      --blue: #3479e1;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; background: var(--bg); color: var(--ink); }
+    body {
+      font-family: ui-sans-serif, system-ui, -apple-system, "Helvetica Neue", sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Logo overlays the top of the viewport so the medallion below is
+       centered vertically from the very first frame. */
+    .hero {
+      position: fixed;
+      top: 32px;
+      left: 0;
+      right: 0;
+      display: flex;
+      justify-content: center;
+      z-index: 5;
+      pointer-events: none;
+    }
+    .hero .logo { pointer-events: auto; }
+    .hero .logo {
+      width: min(12vw, 104px);
+      height: auto;
+      display: block;
+    }
+
+    .outro {
+      min-height: 60vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 8vh 6vw;
+      text-align: center;
+    }
+    .outro p { max-width: 60ch; font-size: 1.125rem; line-height: 1.5; opacity: .7; }
+
+    /* Scene pins the medallion for one scroll-driven spin, then releases. */
+    .scene {
+      position: relative;
+      height: 200vh;
+    }
+
+    .stage {
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    #medallion {
+      width: min(70vmin, 640px);
+      height: min(70vmin, 640px);
+      display: block;
+      cursor: pointer;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+      /* Recolor the blue Lottie to white so it pops on the blue background. */
+      filter: brightness(0) invert(1);
+    }
+
+    .progress {
+      position: fixed;
+      left: 0; top: 0;
+      height: 3px;
+      width: 0%;
+      background: #ffffff;
+      z-index: 10;
+      transition: width 80ms linear;
+    }
+  </style>
+</head>
+<body>
+  <div class="progress" id="progress"></div>
+
+  <header class="hero">
+    <svg class="logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 183.62" aria-label="Dufte">
+      <path fill="#ffffff" d="M95.35,24.97l-29.1-14.35c-13.56-1.77-36.76,1.38-54.06,19.86l19.66,7.08c13.63-14.51,25.82-19.78,40.74-18.25,29.11,54.78-1.95,105.61-54.55,110.78,7.59-24.69,30.59-65.88,42.32-85.06l-15.33-8.26C35.98,51.11,8.85,102.03,0,126.8l25.56,14.35c59.76-14.55,88.47-60.94,69.79-116.19Z"/>
+      <path fill="#ffffff" d="M263.02,133.77c-1.71-3.14-3.02-6.35-3.85-9.56,14.95-8.23,29.93-19.75,40.82-34.17l-18.68-11.8c-28.08-.34-43.51,24.5-37.91,43.62-9.07,3.96-18.25,6.73-26.25,7.81,7.88-19.32,21.27-43.11,33.73-63.42h24.13l4.72-9.24c-8,.14-15.75.26-23.32.36,4.56-7.23,8.85-13.78,12.51-19.24l-15.34-8.25c-4.36,6.28-10.48,16.2-17.07,27.71-5.23.05-10.4.08-15.54.11,9.69-18.34,16.68-30.44,22.78-38.63,5.11-6.88,12.19-11.01,22.41-11.4l-15.73-7.67c-9.63.39-15.92,4.13-20.45,11.01-6.56,10.08-14.04,23.29-26.42,46.74-25.65.01-51.21-.23-79.93-.74l-4.72,9.24h80.18c-3.71,7.08-7.81,14.99-12.4,23.86-12.52,12.72-28.73,29.87-44.18,40.42,5.47-10.12,14.66-25.7,25.75-43.65l-15.33-8.26c-1.74,2.78-3.5,5.72-5.24,8.78-29.41,29.41-34.43,34.07-48.01,43.33,4.57-8.83,15.74-25.87,26.91-43.85l-15.33-8.26c-9.24,14.74-18.87,34.21-26.34,49.34l18.87,10.42c5.44-2.93,18.3-15.46,32.76-29.79-3.34,6.85-6.4,13.62-8.97,19.77l17.89,10.03c5.17-2.78,17.03-14.23,30.6-27.66-9.41,18.3-20.51,39.96-33.75,65.79l14.15,7.08c27.66-53.66,46.35-91.07,60.02-117.37h15.14c-11.67,21.04-23.81,45.31-29.76,62.12l18.28,10.03c7.67-1.11,17.19-3.94,27.24-8.37.22.3.45.6.68.9l16.12,7.47c9.24.59,20.64-3.34,31.06-12.19l-8.65-9.44c-4.57,7.69-10.17,15.2-23.61,17ZM286.25,87.38c-4.84,9.89-15.55,19.37-28.05,26.88.84-11.56,9.12-21.9,28.05-26.88Z"/>
+    </svg>
+  </header>
+
+  <section class="scene" id="scene">
+    <div class="stage">
+      <canvas id="medallion" role="button" aria-label="Spin the medallion" tabindex="0"></canvas>
+    </div>
+  </section>
+
+  <section class="outro" id="outro">
+    <p>Scroll drives one slow spin. Click the medallion for a fast eased spin.</p>
+  </section>
+
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollTrigger.min.js"></script>
+
+  <script type="module">
+    import { DotLottie } from 'https://cdn.jsdelivr.net/npm/@lottiefiles/dotlottie-web/+esm';
+
+    const LOTTIE_URL =
+      'https://cdn.prod.website-files.com/674096ff118647d07213ace2/6740beb608cad80d9b255ba5_DTk1edMQX5.lottie';
+
+    gsap.registerPlugin(ScrollTrigger);
+
+    const canvas = document.getElementById('medallion');
+    const progressBar = document.getElementById('progress');
+
+    const player = new DotLottie({
+      canvas,
+      src: LOTTIE_URL,
+      autoplay: false,
+      loop: false,
+      renderConfig: { devicePixelRatio: window.devicePixelRatio || 1 },
+    });
+
+    const scrollState = { frame: 0 };
+    let totalFrames   = 0;
+    const render = (f) => player.setFrame(((f % totalFrames) + totalFrames) % totalFrames);
+
+    player.addEventListener('load', () => {
+      totalFrames = player.totalFrames;
+      console.log('[medallion] loaded,', totalFrames, 'frames');
+
+      gsap.to(scrollState, {
+        frame: totalFrames - 1,
+        ease: 'none',
+        scrollTrigger: {
+          trigger: '#scene',
+          start: 'top top',
+          end: 'bottom bottom',
+          scrub: 1,
+          onUpdate: (self) => {
+            progressBar.style.width = (self.progress * 100).toFixed(1) + '%';
+          },
+        },
+        onUpdate() { render(scrollState.frame); },
+      });
+
+      render(0);
+    });
+
+    player.addEventListener('loadError', (e) => console.error('[medallion] load error', e));
+
+    // ——— Click: auto-scroll past the pinned scene. The scroll scrub handles the spin. ———
+    const AUTOSCROLL_MS = 1400;
+
+    const smoothScrollTo = (targetY, durationMs) => {
+      const startY = window.scrollY;
+      const delta  = targetY - startY;
+      const t0     = performance.now();
+      const ease = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2); // easeInOutCubic
+      const step = (now) => {
+        const t = Math.min(1, (now - t0) / durationMs);
+        window.scrollTo(0, startY + delta * ease(t));
+        if (t < 1) requestAnimationFrame(step);
+      };
+      requestAnimationFrame(step);
+    };
+
+    const triggerAutoScroll = () => {
+      const outro = document.getElementById('outro');
+      if (outro) smoothScrollTo(outro.offsetTop, AUTOSCROLL_MS);
+    };
+
+    canvas.addEventListener('click', triggerAutoScroll);
+    canvas.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); triggerAutoScroll(); }
+    });
+
+    window.addEventListener('resize', () => ScrollTrigger.refresh());
+  </script>
+</body>
+</html>
