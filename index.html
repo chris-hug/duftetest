@@ -164,13 +164,10 @@
       renderConfig: { devicePixelRatio: basePR * 1.6 },
     });
 
-    // Rotation is driven by scroll across the scene, plus an idle spin that
-    // kicks in once the scene is scrolled past (so the visual keeps rotating
-    // as it leaves the viewport).
+    // A slow idle spin runs from load forever; the scroll scrub adds on top.
     const scrollState = { frame: 0 };
     const idleState   = { frame: 0 };
     let   totalFrames = 0;
-    let   idleTween   = null;
 
     const render = () => {
       const f = scrollState.frame + idleState.frame;
@@ -178,8 +175,8 @@
     };
 
     const CROSSFADE_MS = 240;
-    const TOTAL_SPINS  = 1;     // rotations driven by the scroll scrub (across scene)
-    const IDLE_SPIN_S  = 2.5;   // seconds per rotation after the scene ends
+    const TOTAL_SPINS  = 1;    // rotations driven by the scroll scrub (across scene)
+    const IDLE_SPIN_S  = 20;   // seconds per rotation for the always-on idle spin
 
     player.addEventListener('load', () => {
       totalFrames = player.totalFrames;
@@ -187,8 +184,6 @@
       player.setFrame(0);
 
       // Scroll-scrubbed rotation across the pinned scene.
-      // Once the user scrolls past the scene, an idle spin kicks in so the
-      // medallion keeps rotating as it leaves the viewport.
       gsap.to(scrollState, {
         frame: totalFrames * TOTAL_SPINS,
         ease: 'none',
@@ -200,8 +195,6 @@
           onUpdate: (self) => {
             progressBar.style.width = (self.progress * 100).toFixed(1) + '%';
           },
-          onLeave: () => startIdle(),
-          onEnterBack: () => stopIdle(),
         },
       });
 
@@ -226,24 +219,20 @@
       } else {
         requestAnimationFrame(() => medal.classList.add('ready'));
       }
-    });
 
-    // Idle spin — runs only when the scene has been scrolled past.
-    function startIdle() {
-      if (idleTween) return;
-      idleTween = gsap.to(idleState, {
-        frame: `+=${totalFrames}`,
-        duration: IDLE_SPIN_S,
-        ease: 'none',
-        repeat: -1,
-      });
-    }
-    function stopIdle() {
-      if (!idleTween) return;
-      idleTween.kill();
-      idleTween = null;
-      idleState.frame = 0;
-    }
+      // Start the always-on slow idle spin right after the crossfade finishes,
+      // so the canvas stays at frame 0 while the poster is dissolving.
+      const kickOffIdle = () => {
+        gsap.to(idleState, {
+          frame: `+=${totalFrames}`,
+          duration: IDLE_SPIN_S,
+          ease: 'none',
+          repeat: -1,
+        });
+      };
+      if (reloadedScrolled) kickOffIdle();
+      else setTimeout(kickOffIdle, CROSSFADE_MS + 20);
+    });
 
     player.addEventListener('loadError', (e) => console.error('[medallion] load error', e));
 
