@@ -66,7 +66,8 @@
       overflow: hidden;
     }
 
-    /* Poster and canvas share the same box so the swap is imperceptible. */
+    /* Poster and canvas share the same box so the swap is imperceptible.
+       Starts at 1.5× via transform; scroll scrubs it down to 1×. */
     .medal {
       position: relative;
       width: min(70vmin, 640px);
@@ -74,6 +75,9 @@
       cursor: pointer;
       user-select: none;
       -webkit-tap-highlight-color: transparent;
+      transform: scale(1.5);
+      transform-origin: center center;
+      will-change: transform;
     }
     .medal > .poster,
     .medal > canvas {
@@ -192,6 +196,18 @@
           onUpdate: (self) => {
             progressBar.style.width = (self.progress * 100).toFixed(1) + '%';
           },
+        },
+      });
+
+      // Scroll-scrubbed scale: 1.5 at rest → 1 as the scene scrolls through.
+      gsap.to('.medal', {
+        scale: 1,
+        ease: 'none',
+        scrollTrigger: {
+          trigger: '#scene',
+          start: 'top top',
+          end: 'bottom bottom',
+          scrub: 1,
         },
       });
 
