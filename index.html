@@ -50,10 +50,10 @@
     }
     .outro p { max-width: 60ch; font-size: 1.125rem; line-height: 1.5; opacity: .7; }
 
-    /* Long scene so the medallion stays pinned and rotates as long as you scroll. */
+    /* Scene pins the medallion for one scroll-driven spin, then releases. */
     .scene {
       position: relative;
-      height: 600vh;
+      height: 200vh;
     }
 
     .stage {
@@ -177,13 +177,9 @@
       player.setFrame(((f % totalFrames) + totalFrames) % totalFrames);
     };
 
-    const CROSSFADE_MS  = 240;
-    const SCENE_VH      = 600;   // must match .scene height in CSS
-    const TOTAL_SPINS   = 6;     // rotations driven by the scroll scrub
-    const SHRINK_SPINS  = 2;     // scale 1.5→1 happens during the first N spins
-    const IDLE_SPIN_S   = 2.5;   // seconds per rotation after the scene ends
-    const PINNED_VH       = SCENE_VH - 100;
-    const SHRINK_END_PCT  = (SHRINK_SPINS / TOTAL_SPINS) * PINNED_VH;
+    const CROSSFADE_MS = 240;
+    const TOTAL_SPINS  = 1;     // rotations driven by the scroll scrub (across scene)
+    const IDLE_SPIN_S  = 2.5;   // seconds per rotation after the scene ends
 
     player.addEventListener('load', () => {
       totalFrames = player.totalFrames;
@@ -209,14 +205,14 @@
         },
       });
 
-      // Scale 1.5 → 1 over only the first chunk of the scene (≈ first 2 spins).
+      // Scale 1.5 → 1 across the whole scene (aligned with the single rotation).
       gsap.to('.medal', {
         scale: 1,
         ease: 'none',
         scrollTrigger: {
           trigger: '#scene',
           start: 'top top',
-          end: `+=${SHRINK_END_PCT}%`,   // % of viewport height past start
+          end: 'bottom bottom',
           scrub: 1,
         },
       });
