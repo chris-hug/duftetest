@@ -50,10 +50,10 @@
     }
     .outro p { max-width: 60ch; font-size: 1.125rem; line-height: 1.5; opacity: .7; }
 
-    /* Scene pins the medallion for one scroll-driven spin, then releases. */
+    /* Long scene so the medallion stays pinned and rotates as long as you scroll. */
     .scene {
       position: relative;
-      height: 200vh;
+      height: 600vh;
     }
 
     .stage {
@@ -164,28 +164,33 @@
       renderConfig: { devicePixelRatio: basePR * 1.6 },
     });
 
-    // Two independent drivers, summed every frame:
-    //   baseState  – slow idle rotation, always running
-    //   scrollState – scroll-bound scrub that adds extra rotation on top
-    const baseState   = { frame: 0 };
+    // Rotation is driven entirely by scroll — no idle spin.
     const scrollState = { frame: 0 };
     let   totalFrames = 0;
 
     const render = () => {
-      const f = baseState.frame + scrollState.frame;
+      const f = scrollState.frame;
       player.setFrame(((f % totalFrames) + totalFrames) % totalFrames);
     };
 
-    const CROSSFADE_MS = 240;
+    const CROSSFADE_MS    = 240;
+    const SCENE_VH        = 600;   // must match .scene height in CSS
+    const TOTAL_SPINS     = 6;     // rotations across the whole scene
+    const SHRINK_SPINS    = 2;     // scale 1.5→1 happens during the first N spins
+    // Scale scrub end offset, expressed in % of viewport height (ScrollTrigger "+=N%" syntax):
+    const SHRINK_END_PCT  = (SHRINK_SPINS / TOTAL_SPINS) * SCENE_VH;
 
     player.addEventListener('load', () => {
       totalFrames = player.totalFrames;
       console.log('[medallion] loaded,', totalFrames, 'frames');
       player.setFrame(0);
 
-      // Scroll-scrubbed fast rotation (adds on top of the idle spin).
+      // Scroll-scrubbed rotation: 6 full rotations across the 600vh scene.
+      // Scene is pinned for 500vh, so the medallion stays visible and keeps
+      // spinning for the entire length — first 2 rotations happen fast,
+      // the rest continue as you keep scrolling.
       gsap.to(scrollState, {
-        frame: totalFrames - 1,
+        frame: totalFrames * TOTAL_SPINS,
         ease: 'none',
         scrollTrigger: {
           trigger: '#scene',
@@ -198,45 +203,28 @@
         },
       });
 
-      // Scroll-scrubbed scale: 1.5 at rest → 1 as the scene scrolls through.
+      // Scale 1.5 → 1 over only the first chunk of the scene (≈ first 2 spins).
       gsap.to('.medal', {
         scale: 1,
         ease: 'none',
         scrollTrigger: {
           trigger: '#scene',
           start: 'top top',
-          end: 'bottom bottom',
+          end: `+=${SHRINK_END_PCT}%`,   // % of viewport height past start
           scrub: 1,
         },
       });
 
-      // Render loop runs immediately — while baseState is still 0, the canvas
-      // mirrors the poster's frame 0 exactly, so the cross-fade is seamless.
+      // Render loop runs immediately — canvas mirrors poster frame 0 until scroll starts.
       gsap.ticker.add(render);
 
-      // If the user reloads mid-scroll the poster's frame 0 won't match the
-      // scroll-driven frame; skip the fade and jump straight to the canvas.
       const reloadedScrolled = window.scrollY > 2;
-
       if (reloadedScrolled) {
         medal.classList.add('ready', 'no-fade');
-        startIdleSpin();
       } else {
         requestAnimationFrame(() => medal.classList.add('ready'));
-        // Wait for the cross-fade to complete before starting the idle spin.
-        setTimeout(startIdleSpin, CROSSFADE_MS + 20);
       }
     });
-
-    function startIdleSpin() {
-      // Slow, perpetual idle rotation (20s per full turn).
-      gsap.to(baseState, {
-        frame: totalFrames,
-        duration: 20,
-        ease: 'none',
-        repeat: -1,
-      });
-    }
 
     player.addEventListener('loadError', (e) => console.error('[medallion] load error', e));
 
