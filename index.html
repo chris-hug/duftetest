@@ -154,23 +154,33 @@
       renderConfig: { devicePixelRatio: window.devicePixelRatio || 1 },
     });
 
+    // Two independent drivers, summed every frame:
+    //   baseState  – slow idle rotation, always running
+    //   scrollState – scroll-bound scrub that adds extra rotation on top
+    const baseState   = { frame: 0 };
     const scrollState = { frame: 0 };
-    const introState  = { frame: 0 };
     let   totalFrames = 0;
-    let   introActive = false;
-    let   introTween  = null;
 
-    const render = (f) => player.setFrame(((f % totalFrames) + totalFrames) % totalFrames);
+    const render = () => {
+      const f = baseState.frame + scrollState.frame;
+      player.setFrame(((f % totalFrames) + totalFrames) % totalFrames);
+    };
 
     player.addEventListener('load', () => {
       totalFrames = player.totalFrames;
       console.log('[medallion] loaded,', totalFrames, 'frames');
-      // Render frame 0 to the canvas FIRST, THEN cross-fade from the poster,
-      // so there's no blank flash during the swap.
       player.setFrame(0);
       requestAnimationFrame(() => medal.classList.add('ready'));
 
-      // Scroll-scrubbed spin — yields to the intro tween until the user scrolls.
+      // Slow, perpetual idle rotation (20s per full turn).
+      gsap.to(baseState, {
+        frame: totalFrames,
+        duration: 20,
+        ease: 'none',
+        repeat: -1,
+      });
+
+      // Scroll-scrubbed fast rotation (adds on top of the idle spin).
       gsap.to(scrollState, {
         frame: totalFrames - 1,
         ease: 'none',
@@ -183,31 +193,11 @@
             progressBar.style.width = (self.progress * 100).toFixed(1) + '%';
           },
         },
-        onUpdate() { if (!introActive) render(scrollState.frame); },
       });
 
-      // Auto-play a continuous spin on load. Killed the moment the user scrolls.
-      introActive = true;
-      introTween = gsap.to(introState, {
-        frame: totalFrames,
-        duration: 4,           // seconds per full rotation
-        ease: 'none',
-        repeat: -1,
-        onUpdate() { render(introState.frame); },
-      });
+      // Single render loop — combines both drivers. Runs on GSAP's rAF ticker.
+      gsap.ticker.add(render);
     });
-
-    // First real user scroll hands control to the scroll scrub.
-    const killIntro = () => {
-      if (!introActive) return;
-      introActive = false;
-      if (introTween) introTween.kill();
-    };
-    window.addEventListener('wheel',     killIntro, { once: true, passive: true });
-    window.addEventListener('touchmove', killIntro, { once: true, passive: true });
-    window.addEventListener('keydown',   (e) => {
-      if (['ArrowDown','ArrowUp','PageDown','PageUp','Space',' '].includes(e.key)) killIntro();
-    }, { once: true });
 
     player.addEventListener('loadError', (e) => console.error('[medallion] load error', e));
 
