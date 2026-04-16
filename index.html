@@ -22,11 +22,13 @@
     html.loading,
     html.loading body { overflow: hidden; touch-action: none; overscroll-behavior: none; }
     html.loading .medal { pointer-events: none; }
-    /* Subtle breathing pulse on the poster to signal "still loading". */
-    html.loading .medal > .poster { animation: poster-pulse 1.4s ease-in-out infinite; }
+
+    /* Loading indicator: tiny, translucent, pulsing poster.
+       Replaces the need for a separate spinner — the poster itself IS the
+       loading UI, scaled way down so it never competes with the final reveal. */
     @keyframes poster-pulse {
-      0%, 100% { opacity: 1; }
-      50%      { opacity: 0.55; }
+      0%, 100% { opacity: 0.55; }
+      50%      { opacity: 0.15; }
     }
     body {
       font-family: ui-sans-serif, system-ui, -apple-system, "Helvetica Neue", sans-serif;
@@ -103,18 +105,23 @@
     }
     .medal > .poster {
       object-fit: contain;
-      transition: opacity 240ms ease-out;
       pointer-events: none;
+      /* Loading state is the default: mega small, semi-transparent, pulsing. */
+      transform: scale(0.08);
+      transform-origin: center;
+      opacity: 0.5;
+      animation: poster-pulse 1.4s ease-in-out infinite;
+      transition: opacity 320ms ease-out;
     }
     .medal > canvas {
       opacity: 0;
-      transition: opacity 240ms ease-out;
+      transition: opacity 320ms ease-out;
     }
-    .medal.ready > .poster { opacity: 0; }
+    .medal.ready > .poster { opacity: 0; animation: none; }
     .medal.ready > canvas  { opacity: 1; }
     /* Used when the page is reloaded mid-scroll — no fade, straight swap. */
     .medal.no-fade > .poster,
-    .medal.no-fade > canvas { transition: none; }
+    .medal.no-fade > canvas { transition: none; animation: none; }
 
     .progress {
       position: fixed;
