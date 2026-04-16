@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" class="loading">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
@@ -16,6 +16,18 @@
     }
     * { box-sizing: border-box; }
     html, body { margin: 0; padding: 0; background: var(--bg); color: var(--ink); }
+
+    /* While the Lottie is still loading, block scroll + interaction so
+       ScrollTrigger can't init from a mid-scroll position and snap-jump. */
+    html.loading,
+    html.loading body { overflow: hidden; touch-action: none; overscroll-behavior: none; }
+    html.loading .medal { pointer-events: none; }
+    /* Subtle breathing pulse on the poster to signal "still loading". */
+    html.loading .medal > .poster { animation: poster-pulse 1.4s ease-in-out infinite; }
+    @keyframes poster-pulse {
+      0%, 100% { opacity: 1; }
+      50%      { opacity: 0.55; }
+    }
     body {
       font-family: ui-sans-serif, system-ui, -apple-system, "Helvetica Neue", sans-serif;
       -webkit-font-smoothing: antialiased;
@@ -183,6 +195,10 @@
       console.log('[medallion] loaded,', totalFrames, 'frames');
       player.setFrame(0);
 
+      // Unlock scroll + clicks now that the Lottie is ready. ScrollTrigger
+      // initializes below at scrollY=0 so it can't snap-jump.
+      document.documentElement.classList.remove('loading');
+
       // Scroll-scrubbed rotation across the pinned scene.
       gsap.to(scrollState, {
         frame: totalFrames * TOTAL_SPINS,
@@ -234,7 +250,29 @@
       else setTimeout(kickOffIdle, CROSSFADE_MS + 20);
     });
 
-    player.addEventListener('loadError', (e) => console.error('[medallion] load error', e));
+    player.addEventListener('loadError', (e) => {
+      console.error('[medallion] load error', e);
+      // Don't trap the user forever if the asset fails.
+      document.documentElement.classList.remove('loading');
+    });
+
+    // Belt-and-braces: kill any wheel/touch/key input that sneaks past CSS
+    // while .loading is on the <html> element.
+    const block = (e) => {
+      if (document.documentElement.classList.contains('loading')) e.preventDefault();
+    };
+    addEventListener('wheel',     block, { passive: false });
+    addEventListener('touchmove', block, { passive: false });
+    addEventListener('keydown', (e) => {
+      if (document.documentElement.classList.contains('loading') &&
+          ['ArrowDown','ArrowUp','PageDown','PageUp','Home','End','Space',' '].includes(e.key)) {
+        e.preventDefault();
+      }
+    });
+
+    // Safety fallback — if the Lottie hasn't loaded in 10s (slow net, CDN issue),
+    // unlock scroll anyway so the page remains usable.
+    setTimeout(() => document.documentElement.classList.remove('loading'), 10000);
 
     // ——— Click: auto-scroll past the pinned scene. The scroll scrub handles the spin. ———
     const AUTOSCROLL_MS = 1400;
