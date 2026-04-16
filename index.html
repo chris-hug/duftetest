@@ -100,6 +100,9 @@
     }
     .medal.ready > .poster { opacity: 0; }
     .medal.ready > canvas  { opacity: 1; }
+    /* Used when the page is reloaded mid-scroll — no fade, straight swap. */
+    .medal.no-fade > .poster,
+    .medal.no-fade > canvas { transition: none; }
 
     .progress {
       position: fixed;
@@ -173,19 +176,12 @@
       player.setFrame(((f % totalFrames) + totalFrames) % totalFrames);
     };
 
+    const CROSSFADE_MS = 240;
+
     player.addEventListener('load', () => {
       totalFrames = player.totalFrames;
       console.log('[medallion] loaded,', totalFrames, 'frames');
       player.setFrame(0);
-      requestAnimationFrame(() => medal.classList.add('ready'));
-
-      // Slow, perpetual idle rotation (20s per full turn).
-      gsap.to(baseState, {
-        frame: totalFrames,
-        duration: 20,
-        ease: 'none',
-        repeat: -1,
-      });
 
       // Scroll-scrubbed fast rotation (adds on top of the idle spin).
       gsap.to(scrollState, {
@@ -214,9 +210,33 @@
         },
       });
 
-      // Single render loop — combines both drivers. Runs on GSAP's rAF ticker.
+      // Render loop runs immediately — while baseState is still 0, the canvas
+      // mirrors the poster's frame 0 exactly, so the cross-fade is seamless.
       gsap.ticker.add(render);
+
+      // If the user reloads mid-scroll the poster's frame 0 won't match the
+      // scroll-driven frame; skip the fade and jump straight to the canvas.
+      const reloadedScrolled = window.scrollY > 2;
+
+      if (reloadedScrolled) {
+        medal.classList.add('ready', 'no-fade');
+        startIdleSpin();
+      } else {
+        requestAnimationFrame(() => medal.classList.add('ready'));
+        // Wait for the cross-fade to complete before starting the idle spin.
+        setTimeout(startIdleSpin, CROSSFADE_MS + 20);
+      }
     });
+
+    function startIdleSpin() {
+      // Slow, perpetual idle rotation (20s per full turn).
+      gsap.to(baseState, {
+        frame: totalFrames,
+        duration: 20,
+        ease: 'none',
+        repeat: -1,
+      });
+    }
 
     player.addEventListener('loadError', (e) => console.error('[medallion] load error', e));
 
