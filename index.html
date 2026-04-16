@@ -4,7 +4,8 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Dufte — Scroll + Click Medallion</title>
-  <!-- Kick off the 1.6 MB Lottie download as early as possible, in parallel with scripts. -->
+  <!-- Paint the 50 KB poster immediately; fetch the 1.6 MB Lottie in parallel. -->
+  <link rel="preload" href="./medallion-poster.webp" as="image" fetchpriority="high" />
   <link rel="preload" href="./medallion.lottie" as="fetch" crossorigin="anonymous" />
   <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/@lottiefiles/dotlottie-web/+esm" />
   <style>
@@ -65,33 +66,36 @@
       overflow: hidden;
     }
 
-    #medallion {
+    /* Poster and canvas share the same box so the swap is imperceptible. */
+    .medal {
+      position: relative;
       width: min(70vmin, 640px);
       height: min(70vmin, 640px);
-      display: block;
       cursor: pointer;
       user-select: none;
       -webkit-tap-highlight-color: transparent;
-      /* Recolor the blue Lottie to white so it pops on the blue background. */
+    }
+    .medal > .poster,
+    .medal > canvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      display: block;
+      /* Recolor blue → white so it matches the filtered Lottie output. */
       filter: brightness(0) invert(1);
+    }
+    .medal > .poster {
+      object-fit: contain;
+      transition: opacity 240ms ease-out;
+      pointer-events: none;
+    }
+    .medal > canvas {
       opacity: 0;
       transition: opacity 240ms ease-out;
     }
-    #medallion.ready { opacity: 1; }
-
-    /* Simple spinner shown until the Lottie's first frame is rendered. */
-    .stage .spinner {
-      position: absolute;
-      width: 48px;
-      height: 48px;
-      border-radius: 50%;
-      border: 3px solid rgba(255,255,255,.25);
-      border-top-color: #fff;
-      animation: spin 0.9s linear infinite;
-      transition: opacity 200ms ease-out;
-    }
-    .stage .spinner.hidden { opacity: 0; pointer-events: none; }
-    @keyframes spin { to { transform: rotate(360deg); } }
+    .medal.ready > .poster { opacity: 0; }
+    .medal.ready > canvas  { opacity: 1; }
 
     .progress {
       position: fixed;
@@ -116,8 +120,10 @@
 
   <section class="scene" id="scene">
     <div class="stage">
-      <div class="spinner" id="spinner" aria-hidden="true"></div>
-      <canvas id="medallion" role="button" aria-label="Spin the medallion" tabindex="0"></canvas>
+      <div class="medal" id="medal" role="button" aria-label="Spin the medallion" tabindex="0">
+        <img class="poster" src="./medallion-poster.webp" alt="" aria-hidden="true" decoding="sync" fetchpriority="high" />
+        <canvas id="medallion"></canvas>
+      </div>
     </div>
   </section>
 
@@ -137,8 +143,8 @@
     gsap.registerPlugin(ScrollTrigger);
 
     const canvas      = document.getElementById('medallion');
+    const medal       = document.getElementById('medal');
     const progressBar = document.getElementById('progress');
-    const spinner     = document.getElementById('spinner');
 
     const player = new DotLottie({
       canvas,
@@ -155,9 +161,10 @@
     player.addEventListener('load', () => {
       totalFrames = player.totalFrames;
       console.log('[medallion] loaded,', totalFrames, 'frames');
-      // Fade the medallion in and hide the spinner.
-      canvas.classList.add('ready');
-      spinner.classList.add('hidden');
+      // Render frame 0 to the canvas FIRST, THEN cross-fade from the poster,
+      // so there's no blank flash during the swap.
+      player.setFrame(0);
+      requestAnimationFrame(() => medal.classList.add('ready'));
 
       gsap.to(scrollState, {
         frame: totalFrames - 1,
@@ -200,8 +207,8 @@
       if (outro) smoothScrollTo(outro.offsetTop, AUTOSCROLL_MS);
     };
 
-    canvas.addEventListener('click', triggerAutoScroll);
-    canvas.addEventListener('keydown', (e) => {
+    medal.addEventListener('click', triggerAutoScroll);
+    medal.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); triggerAutoScroll(); }
     });
 
