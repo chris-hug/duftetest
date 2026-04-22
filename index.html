@@ -197,7 +197,10 @@
     const TOTAL_SPINS  = 1;    // rotations driven by the scroll scrub (across scene)
     const IDLE_SPIN_S  = 20;   // seconds per rotation for the always-on idle spin
 
+    let loadHandled = false;
     player.addEventListener('load', () => {
+      if (loadHandled) return;  // dotlottie-web can fire 'load' repeatedly
+      loadHandled = true;
       totalFrames = player.totalFrames;
       console.log('[medallion] loaded,', totalFrames, 'frames');
       player.setFrame(0);
